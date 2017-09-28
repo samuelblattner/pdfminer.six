@@ -315,6 +315,8 @@ class LTChar(LTComponent, LTText):
 
 class LTFootnoteMarker(LTComponent, LTText):
 
+    fontname = 'footnote'
+
     def __init__(self, text, bbox, *args, **kwargs):
         super(LTFootnoteMarker, self).__init__(bbox)
         self.text = text
