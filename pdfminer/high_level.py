@@ -8,13 +8,10 @@ bundled scripts and for using pdfminer as a module for routine tasks.
 import six
 import sys
 
-from .pdfdocument import PDFDocument
-from .pdfparser import PDFParser
 from .pdfinterp import PDFResourceManager, PDFPageInterpreter
-from .pdfdevice import PDFDevice, TagExtractor
+from .pdfdevice import TagExtractor
 from .pdfpage import PDFPage
 from .converter import XMLConverter, HTMLConverter, TextConverter
-from .cmapdb import CMapDB
 from .image import ImageWriter
 
 
