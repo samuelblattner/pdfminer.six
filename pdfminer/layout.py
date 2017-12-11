@@ -552,6 +552,28 @@ class LTTextLineHorizontal(LTTextLine):
         # 1. Check if this line is a footnote (if required)
         dv = laparams.line_margin*self.height
 
+        stray_x_coords = []
+        stray_x_elements = {}
+        vertically_matching_lines = list(plane.find((self.x0, self.y0-dv*20, self.x1 + 400, self.y1+dv)))
+        after_lines = sorted([obj for obj in vertically_matching_lines if isinstance(obj, LTTextLineHorizontal) and obj.y0 < self.y0], key=lambda s: s.y0, reverse=True)
+        for after_line in after_lines:
+            if after_line.x0 not in stray_x_coords:
+                stray_x_coords.append(after_line.x0)
+                stray_x_elements.setdefault(after_line.x0, []).append(after_line)
+            elif after_line.x0 in stray_x_elements:
+                del stray_x_elements[after_line.x0]
+
+        effective_stray_elements = []
+        for key, strays in stray_x_elements.items():
+            effective_stray_elements += strays
+
+        if 'Urteil des Verwaltungsgerichts' in self.get_text():
+            print('Current Line: {}'.format(self.get_text()[:20]).encode('utf-8'))
+            print('================================')
+            print('After lines:')
+            for line in after_lines:
+                print('line: {}'.format(line.get_text()[:20]).encode('utf-8'))
+
         horizontal_scan_range = laparams.footnote_min_def_distance + 20 if auto_footnotes else 0
         objs = list(plane.find((self.x0, self.y0-dv*20, self.x1 + horizontal_scan_range, self.y1+dv)))
         is_footnote = self.is_footnote(laparams, objs) if auto_footnotes else False
@@ -592,7 +614,10 @@ class LTTextLineHorizontal(LTTextLine):
         max_dy_above = min(dist_lines_above) if len(dist_lines_above) > 0 else 40
         max_dy_below = max(dist_lines_below) if len(dist_lines_below) > 0 else -40
 
-        return [obj for obj in objs
+        # print('\nOBJS BEFORE:\n============================')
+        # print('{}'.format(objs).encode('utf-8'))
+
+        retobjs = [obj for obj in objs
                 if (isinstance(obj, LTTextLineHorizontal) and
                     abs(obj.height-self.height) < dv and
                     (abs(obj.x0-self.x0) < dh or abs(obj.x1-self.x1) < dh)) and
@@ -600,7 +625,11 @@ class LTTextLineHorizontal(LTTextLine):
                     obj.y1 <= self.y1 and
                     max_dy_below < obj.y1 - self.y1 < max_dy_above or
                     obj is self
-               ], is_footnote, is_list_element
+               ] + effective_stray_elements
+
+        # print('\nIBJS AFTER:\n============================')
+        # print('{}'.format(retobjs).encode('utf-8'))
+        return retobjs, is_footnote, is_list_element
 
 
 class LTTextLineVertical(LTTextLine):
