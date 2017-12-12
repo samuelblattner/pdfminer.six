@@ -40,7 +40,7 @@ class LAParams(object):
 
     def __init__(self,
                  line_overlap=0.5,
-                 char_margin=2.0,
+                 char_margin=5.0,
                  line_margin=0.5,
                  word_margin=0.1,
                  boxes_flow=0.5,
@@ -70,6 +70,7 @@ class LAParams(object):
         self.footnote_min_def_distance = footnote_min_def_distance
         self.auto_lists = auto_lists
         self.list_min_def_distance = list_min_def_distance
+        self.list_counter = 0
         return
 
     def __repr__(self):
@@ -522,7 +523,7 @@ class LTTextLineHorizontal(LTTextLine):
 
     def is_list_element(self, laparams, surrounding_objects):
         """
-        Checks if this textline fulfills the criteria to be a footnote (i.e. starts with a small
+        Checks if this textline fulfills the criteria to be a list element (i.e. starts with a small
         number).
 
         :param laparams Params
@@ -533,7 +534,18 @@ class LTTextLineHorizontal(LTTextLine):
         first_letters = self.get_text()[:10]
         first_letter_font_size = first_letter.matrix[0]
 
+        # Check if any of the vertical direct neighbours match for list elements too, otherwise, this cant' be a list
         first_letter_is_list_index = re.search(r'^([a-z\d]{1,3}\.)+', first_letters) is not None
+        if first_letter_is_list_index:
+            for obj in surrounding_objects:
+                if (abs(obj.y0 - self.y1) < 5 or abs(self.y0 - obj.y1) < 5) and abs(obj.x0 - self.x0) < 5:
+                    if re.search(r'^([a-z\d]{1,3}\.)+', obj.get_text()[:10]) is not None:
+                        break
+            else:
+                first_letter_is_list_index = False
+
+        # if first_letter_is_list_index:
+        #     print('{}'.format([obj.get_text()[:20].encode('utf-8') for obj in surrounding_objects]))
 
         has_objs_with_same_x = len([obj for obj in surrounding_objects if obj.x0 == self.x0]) > 0
         has_objs_with_same_y = len([obj for obj in surrounding_objects if abs(obj.y1-self.y1) < 0.5 and obj.x1 > self.x1]) > 0
@@ -1125,8 +1137,9 @@ class LTLayoutContainer(LTContainer):
                     if tabstop.bottom_most > bottom_most_implicit:
                         tabstop.bottom_most = bottom_most_implicit
 
-                    for textline in textlines:
-                        if textline.x0 + 2 < tabstop.x and textline.x1 > tabstop.x or textline._objs[0].matrix[0] >= 10:
+                    # Cut off imaginary lines top and bottom if they are crosed by a text line
+                    for textline in sorted(textlines, key=lambda t: t.y0, reverse=True):
+                        if textline.x0 - 2 < tabstop.x and textline.x1 > tabstop.x or textline._objs[0].matrix[0] >= 10:
                             tabstop_middle = (tabstop.top_most - tabstop.bottom_most) / 2 + tabstop.bottom_most
                             if tabstop.top_most > textline.y0 > tabstop_middle:
                                 tabstop.top_most = textline.y0
